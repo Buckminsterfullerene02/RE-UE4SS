@@ -56,16 +56,16 @@ namespace RC::USMapWriter
    void MappingsDump()
     {
        
-    auto CompressionMethod = ECompressionMethod::Oodle;
+    auto CompressionMethod = ECompressionMethod::None;
     StreamWriter Buffer;
 	phmap::parallel_flat_hash_map<FName, int> NameMap;
 
 	std::vector<class UEnum*> Enums;
 	std::vector<class UStruct*> Structs; // TODO: a better way than making this completely dynamic
 
-	std::function<void(class FProperty*&, EPropertyType)> WritePropertyWrapper{}; // hacky.. i know
+	std::function<void(class XProperty*&, EPropertyType)> WritePropertyWrapper{}; // hacky.. i know
 
-	auto WriteProperty = [&](FProperty*& Prop, EPropertyType Type)
+	auto WriteProperty = [&](XProperty*& Prop, EPropertyType Type)
 	{
 		if (Type == EPropertyType::EnumAsByteProperty)
 			Buffer.Write(EPropertyType::EnumProperty);
@@ -145,7 +145,7 @@ namespace RC::USMapWriter
 				while (Props)
 				{
 					NameMap.insert_or_assign(Props->GetFName(), 0);
-					Props = static_cast<FProperty*>(Props->GetNext());
+					Props = static_cast<XProperty*>(Props->GetNext());
 				}
 			}
 			else if (meta_class->IsChildOf<UEnum>)
@@ -223,7 +223,7 @@ namespace RC::USMapWriter
 			FPropertyData Data(Props, PropCount);
 
 			Properties.push_back(Data);
-			Props = static_cast<FProperty*>(Props->GetNext());
+			Props = static_cast<XProperty*>(Props->GetNext());
 
 			PropCount += Data.ArrayDim;
 			SerializablePropCount++;
