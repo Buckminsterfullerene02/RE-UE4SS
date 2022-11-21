@@ -51,11 +51,12 @@ namespace RC::USMapWriter
     using FDelegateProperty = RC::Unreal::FDelegateProperty;
     using FMulticastInlineDelegateProperty = RC::Unreal::FMulticastInlineDelegateProperty;
     using FMulticastSparseDelegateProperty = RC::Unreal::FMulticastSparseDelegateProperty;
+    using FPropertyData = Dumper::FPropertyData;
 
    void MappingsDump()
     {
-
-	auto CompressionMethod = ECompressionMethod::Oodle;
+       
+    auto CompressionMethod = ECompressionMethod::Oodle;
     StreamWriter Buffer;
 	phmap::parallel_flat_hash_map<FName, int> NameMap;
 
@@ -179,7 +180,7 @@ namespace RC::USMapWriter
 	    std::string Converted_Name = converter.to_bytes(Name);
 		std::string_view NameView = Converted_Name;
 
-		auto Find = Name.find(*"::");
+		auto Find = Name.find("::");
 		if (Find != std::string::npos)
 		{
 			NameView = NameView.substr(Find + 2);
@@ -208,12 +209,12 @@ namespace RC::USMapWriter
 
 	for (auto Struct : Structs)
 	{
-		Buffer.Write(NameMap[Struct->GetName()]);
-		Buffer.Write<int32_t>(Struct->Super() ? NameMap[Struct->Super()->GetName()] : 0xffffffff);
+		Buffer.Write(NameMap[Struct->GetFName()]);
+		Buffer.Write<int32_t>(Struct->GetSuperStruct() ? NameMap[Struct->GetSuperStruct()->GetFName()] : 0xffffffff);
 
 		std::vector<FPropertyData> Properties;
 
-		auto Props = Struct->GetProperties();
+		auto Props = Struct->GetChildProperties();
 		uint16_t PropCount = 0;
 		uint16_t SerializablePropCount = 0;
 
@@ -242,6 +243,16 @@ namespace RC::USMapWriter
 	}
 
 	std::vector<uint8_t> UsmapData;
+
+	switch (CompressionMethod) 
+	{
+		default:
+		{
+			std::string UncompressedStream = Buffer.GetBuffer().str();
+			UsmapData.resize(UncompressedStream.size());
+			memcpy(UsmapData.data(), UncompressedStream.data(), UsmapData.size());
+		}
+	}
 
 	auto FileOutput = FileWriter("Mappings.usmap");
 
