@@ -223,6 +223,7 @@ set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/SDKGenerator/Common.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/SDKGenerator/Generator.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/SDKGenerator/UEHeaderGenerator.cpp"
+		"${CMAKE_CURRENT_SOURCE_DIR}/src/SDKGenerator/USMapWriter.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/SDKGenerator/JSONDumper.cpp"
         #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaCustomMemberFunctions.cpp"
         #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaScriptMemoryAccess.cpp"
@@ -235,6 +236,15 @@ set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/LiveView.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/Dumpers.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/ImGuiUtility.cpp"
+		"${CMAKE_CURRENT_SOURCE_DIR}/include/parallel_hashmap/btree.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/parallel_hashmap/meminfo.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/parallel_hashmap/phmap.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/parallel_hashmap/phmap_base.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/parallel_hashmap/phmap_bits.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/parallel_hashmap/phmap_config.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/parallel_hashmap/phmap_dump.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/parallel_hashmap/phmap_fwd_decl.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/parallel_hashmap/phmap_utils.h"
 
         # imgui
         "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/imgui/imgui.cpp"

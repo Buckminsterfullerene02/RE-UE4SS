@@ -17,6 +17,7 @@
 #include <Unreal/AActor.hpp>
 #include <Unreal/UFunction.hpp>
 #include <Unreal/UScriptStruct.hpp>
+#include <SDKGenerator/USMapWriter.hpp>
 #include <imgui.h>
 
 namespace RC::GUI::Dumpers
@@ -259,6 +260,11 @@ namespace RC::GUI::Dumpers
             /*auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_actor_data.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
             file.write_string_to_file(generate_actors_json_file(AActor::StaticClass()));*/
         }
+
+	    if (ImGui::Button("Dump .usmap Unversioned Properties Mappings File"))
+	    {
+	        RC::USMapWriter::MappingsDump();
+	    }
 
         /*ImGui::SameLine();*/
 
