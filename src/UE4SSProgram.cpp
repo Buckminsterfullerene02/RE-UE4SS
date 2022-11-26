@@ -528,10 +528,10 @@ namespace RC
                 freopen_s(&stderr_filename, "CONOUT$", "w", stderr);
             }
 
-            if (m_debug_console_enabled && m_debug_console_visible)
-            {
-                m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
-            }
+        }
+        if (m_debug_console_enabled && m_debug_console_visible)
+        {
+            m_render_thread = std::jthread{ &GUI::gui_thread, &m_debugging_gui };
         }
     }
 
@@ -783,11 +783,20 @@ namespace RC
         /*
         UObjectArray::AddUObjectCreateListener(&FUEDeathListener::UEDeathListener);
         //*/
+
         if (m_debug_console_enabled)
         {
-            m_debugging_gui.get_live_view().set_listeners();
+            if (settings_manager.General.UseUObjectArrayCache)
+            {
+                m_debugging_gui.get_live_view().set_listeners_allowed(true);
+                m_debugging_gui.get_live_view().set_listeners();
+            }
+            else
+            {
+                m_debugging_gui.get_live_view().set_listeners_allowed(false);
+            }
 
-            m_input_handler.register_keydown_event(Input::Key::O, {Input::ModifierKey::CONTROL}, [&]() {
+            m_input_handler.register_keydown_event(Input::Key::O, { Input::ModifierKey::CONTROL }, [&]() {
                 TRY([&] {
                     if (!get_debugging_ui().is_open())
                     {
@@ -796,84 +805,27 @@ namespace RC
                             m_render_thread.request_stop();
                             m_render_thread.join();
                         }
-                        m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
+                        m_render_thread = std::jthread{ &GUI::gui_thread, &m_debugging_gui };
                     }
+                    });
                 });
-            });
         }
 
-        m_input_handler.register_keydown_event(Input::Key::Q, {Input::ModifierKey::CONTROL}, [&]() {
-            TRY([&] {
-                Output::send(STR("\n\nFinding all actor classes (FindObjectSearcher<AActor>)\n"));
-                auto ActorClassSearcher = FindObjectSearcher<UClass, AActor>();
-                Output::send(STR("PoolSize: {}\n"), ActorClassSearcher.PoolSize());
-                ActorClassSearcher.ForEach([&](UObject* FoundClass) {
-                    Output::send(STR("Found Actor Class: {}\n"), FoundClass->GetFullName());
-                    return LoopAction::Continue;
-                });
-
-                Output::send(STR("\n\nFinding all BP classes (FindObjectSearcher<UBlueprintGeneratedClass>)\n"));
-                auto BPClassSearcher = FindObjectSearcher<UBlueprintGeneratedClass, AnySuperStruct>();
-                Output::send(STR("PoolSize: {}\n"), BPClassSearcher.PoolSize());
-                BPClassSearcher.ForEach([&](UObject* FoundClass) {
-                    Output::send(STR("Found BP Class: {}\n"), FoundClass->GetFullName());
-                    return LoopAction::Continue;
-                });
-
-                // Finds all classes.
-                Output::send(STR("\n\nFinding all classes (FindObjectSearcher<UClass, AnySuperStruct>)\n"));
-                auto ClassSearcher2 = FindObjectSearcher<UClass, AnySuperStruct>();
-                Output::send(STR("PoolSize: {}\n"), ClassSearcher2.PoolSize());
-                ClassSearcher2.ForEach([&](UObject* FoundClass) {
-                    auto* AsClass = static_cast<UClass*>(FoundClass);
-                    Output::send(STR("Found Class: {}\n"), AsClass->GetFullName());
-                    return LoopAction::Continue;
-                });
-
-                Output::send(STR("\n\nFinding all actor instances (FindObjectSearcher<AnyClass, AActor>)\n"));
-                auto ActorSearcher = FindObjectSearcher<AActor, AnySuperStruct>();
-                Output::send(STR("ActorSearcher Num: {}\n"), ActorSearcher.PoolSize());
-                ActorSearcher.ForEach([](UObject* Object) {
-                    Output::send(STR("{}\n"), Object->GetFullName());
-                    return LoopAction::Continue;
-                });
-
-                /*
-                Output::send(STR("\n\nFinding all objects (FindObjectSearcher<Class, AActor>)\n"));
-                auto AllSearcher = FindObjectSearcher<AnyClass, AnySuperStruct>();
-                Output::send(STR("AllSearcher Num: {}\n"), AllSearcher.PoolSize());
-                AllSearcher.ForEach([](UObject* Object) {
-                    Output::send(STR("{}\n"), Object->GetFullName());
-                    return LoopAction::Continue;
-                });
-                //*/
-            });
+#ifdef TIME_FUNCTION_MACRO_ENABLED
+        m_input_handler.register_keydown_event(Input::Key::Y, { Input::ModifierKey::CONTROL }, [&]() {
+            if (FunctionTimerFrame::s_timer_enabled)
+            {
+                FunctionTimerFrame::stop_profiling();
+                FunctionTimerFrame::dump_profile();
+                Output::send(STR("Profiler stopped & dumped\n"));
+            }
+            else
+            {
+                FunctionTimerFrame::start_profiling();
+                Output::send(STR("Profiler started\n"));
+            }
         });
-
-        /*
-        m_input_handler.register_keydown_event(Input::Key::I, {Input::ModifierKey::CONTROL}, [&]() {
-            TRY([&] {
-                auto AssetRegistry = Cast<UAssetRegistry>(UAssetRegistryHelpers::GetAssetRegistry().ObjectPointer);
-                if (!AssetRegistry)
-                {
-                    Output::send(STR("AssetRegistry was nullptr\n"));
-                }
-                else
-                {
-                    auto& interfaces = AssetRegistry->GetClassPrivate()->GetInterfaces();
-                    interfaces.ForEach([&](const RC::Unreal::FImplementedInterface* the_interface) {
-                        Output::send(STR("Interface: {}\n"), the_interface->Class->GetFullName());
-                        return LoopAction::Continue;
-                    });
-                    auto f = AssetRegistry->GetFunctionByNameInChain(STR("GetAllAssets"));
-                    Output::send(STR("Function: {}\n"), f ? f->GetFullName() : STR("None"));
-
-                    ::RC::Unreal::TArray<FAssetData> AllAssets{nullptr, 0, 0};
-                    AssetRegistry->GetAllAssets2(AllAssets, false);
-                }
-            });
-        });
-        //*/
+#endif
 
         TRY([&] {
             ObjectDumper::init();
@@ -890,80 +842,9 @@ namespace RC
                 Output::send<LogLevel::Warning>(STR("FAssetData not available in <4.17, ignoring 'LoadAllAssetsBeforeDumpingObjects' & 'LoadAllAssetsBeforeGeneratingCXXHeaders'."));
             }
 
-            m_input_handler.register_keydown_event(Input::Key::Y, {Input::ModifierKey::CONTROL}, [&]() {
-                TRY([&] {
-                    AActor* character = Unreal::Cast<AActor>(UObjectGlobals::FindFirstOf(STR("Character")));
-                    Output::send(STR("Name from auto-generated getter: {}\n"), character->GetNamePrivate().ToString());
-                    // UObjectGlobals::StaticFindObject<UGameplayStatics*>(nullptr, nullptr, STR("/Script/Engine.Default__GameplayStatics"));
-                    UClass* to_spawn{};
-                    if (Unreal::Version::IsBelow(5, 0))
-                    {
-                        to_spawn = Unreal::Cast<UClass>(UObjectGlobals::FindObject(nullptr, nullptr, STR("/Game/FirstPersonCPP/Blueprints/FirstPersonProjectile.FirstPersonProjectile_C")));
-                    }
-                    else
-                    {
-                        to_spawn = Unreal::Cast<UClass>(UObjectGlobals::FindObject(nullptr, nullptr, STR("/Game/FirstPerson/Blueprints/BP_FirstPersonProjectile.BP_FirstPersonProjectile_C")));
-                    }
-
-                    Output::send(STR("500+{:X}, Pre500{:X}\n"), sizeof(Unreal::FTransform_As500Plus), sizeof(Unreal::FTransform_AsPre500));
-
-                    Output::send(STR("to_spawn: {}\n"), to_spawn->GetFullName());
-                    Unreal::FTransform transform = character->GetTransform();
-                    //AActor* actor = Unreal::UGameplayStatics::BeginDeferredActorSpawnFromClass(character->GetWorld(), to_spawn, transform);
-                    //Loc: -351.000366 -99.000000 268.373718
-                    //RotatorAsVector.X: 0.996715
-                    //RotatorAsVector.Y: -0.079046
-                    //RotatorAsVector.Z: 0.017607
-                    //Final X: -278.083986
-                    //Final Y: 2.134236
-                    //Final Z: 5111.598653
-                    float X = -351.000366f;
-                    X += (72.f * 0.996715 + 0.f) * 15.f;
-                    float Y = -99.000000f;
-                    Y += (72.f * -0.079046 + 0.f) * 15.f;
-                    float Z = 268.373718f;
-                    Z += 72.f * 0.017607 + 1.f * 15.f;
-                    Output::send(STR("X test: {}\n"), X);
-                    Output::send(STR("Y test: {}\n"), Y);
-                    Output::send(STR("Z test: {}\n"), Z);
-                    AActor* actor = character->GetWorld()->SpawnActor(to_spawn, &transform);
-                    if (actor)
-                    {
-                        Output::send(STR("actor: {} {}\n"), (void*)actor, actor->GetFullName());
-                        Unreal::FTransform t = actor->GetTransform();
-                        Output::send(STR("actor loc: {} {} {}\n"), t.Translation().X(), t.Translation().Y(), t.Translation().Z());
-                    }
-                    else
-                    {
-                        Output::send(STR("actor was nullptr\n"));
-                    }
-
-                    /*
-                    actor = Unreal::UGameplayStatics::FinishSpawningActor(actor, transform);
-                    if (actor)
-                    {
-                        Output::send(STR("actor: {} {}\n"), (void*)actor, actor->GetFullName());
-                    }
-                    else
-                    {
-                        Output::send(STR("actor was nullptr\n"));
-                    }
-                    //*/
-                });
-            });
-
             setup_mods();
             Mod::on_program_start();
             start_mods();
-
-            FName fname{STR("Controller")};
-            FStringOut fstring{};
-            FName::ToStringInternal(&fname, fstring);
-            const Unreal::TArray<TCHAR>& tarray = fstring.GetCharTArray();
-            Unreal::FScriptArray* fscriptarray = std::bit_cast<Unreal::FScriptArray*>(&tarray);
-            printf_s("Data: %p\n", fscriptarray->GetData());
-            printf_s("Num: %i\n", fscriptarray->Num());
-            printf_s("Max: %i\n", fscriptarray->Max());
         });
 
         if (settings_manager.General.EnableDebugKeyBindings)
@@ -1048,6 +929,7 @@ namespace RC
         LuaType::StaticState::m_property_value_pushers.emplace(FName(L"NameProperty").GetComparisonIndex(), &LuaType::push_nameproperty);
         LuaType::StaticState::m_property_value_pushers.emplace(FName(L"TextProperty").GetComparisonIndex(), &LuaType::push_textproperty);
         LuaType::StaticState::m_property_value_pushers.emplace(FName(L"StrProperty").GetComparisonIndex(), &LuaType::push_strproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"SoftClassProperty").GetComparisonIndex(), &LuaType::push_softclassproperty);
     }
 
     auto UE4SSProgram::setup_mods() -> void
@@ -1095,7 +977,7 @@ namespace RC
                 return std::format(STR("[{}] {}"), std::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
             });
         }
-        
+
         if (m_debug_console_enabled)
         {
             m_console_device = &Output::set_default_devices<Output::ConsoleDevice>();
@@ -1173,7 +1055,7 @@ namespace RC
                 std::wstring mod_name = explode_by_occurrence(current_line, L':', 1);
                 std::wstring mod_enabled = explode_by_occurrence(current_line, L':', ExplodeType::FromEnd);
 
-                auto mod = find_mod_by_name(mod_name, IsInstalled::Yes);
+                Mod* mod = find_mod_by_name(mod_name, IsInstalled::Yes);
 
                 if (mod_enabled == L"1")
                 {
@@ -1206,7 +1088,7 @@ namespace RC
             if (!std::filesystem::exists(mod_directory.path() / "enabled.txt", ec)) { continue; }
             if (ec.value() != 0) { set_error("exists ran into error %d", ec.value()); }
 
-            const auto mod = find_mod_by_name(mod_directory.path().stem().c_str(), IsInstalled::Yes);
+            auto mod = find_mod_by_name(mod_directory.path().stem().c_str(), IsInstalled::Yes);
             if (!mod)
             {
                 Output::send<LogLevel::Warning>(STR("Found a mod with enabled.txt but mod has not been installed properly.\n"));
@@ -1224,6 +1106,8 @@ namespace RC
     {
         for (const auto& mod : m_mods)
         {
+            // Remove any actions, or we'll get an internal error as the lua ref won't be valid
+            mod->clear_delayed_actions();
             mod->uninstall();
         }
 
@@ -1239,10 +1123,6 @@ namespace RC
 
         // Stop processing events while stuff isn't properly setup
         m_pause_events_processing = true;
-
-        // Remove any actions, or we'll get an internal error as the lua ref won't be valid
-        Mod::clear_delayed_actions();
-        Mod::clear_async_loop_threads();
 
         uninstall_mods();
 
@@ -1334,7 +1214,6 @@ namespace RC
             m_render_thread.request_stop();
             m_render_thread.join();
         }
-        
     }
 
     auto UE4SSProgram::queue_event(EventCallable callable, void* data) -> void
