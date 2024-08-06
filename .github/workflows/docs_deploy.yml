@@ -45,7 +45,7 @@ jobs:
 
       - name: Upload docs artifact
         uses: actions/upload-artifact@v4
-        if: ${{ startsWith(github.ref, 'refs/pull/') }}
+        # if: ${{ startsWith(github.ref, 'refs/pull/') }}
         with:
           name: ${{ github.sha }}
           path: ${{ steps.build-docs.outputs.output-dir }}
