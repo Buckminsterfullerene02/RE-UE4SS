@@ -2,6 +2,11 @@ name: Log dwmapi.dll version
 
 on:
   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run the workflow on'
+        default: 'main'
+        required: true
 
 permissions:
   contents: read
