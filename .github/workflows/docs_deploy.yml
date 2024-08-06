@@ -1,0 +1,61 @@
+name: Docs CI
+permissions:
+    contents: write
+    pull-requests: write # For adding comments to PR.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+        - 'main'
+    paths:
+        - '.github/actions/docs_build/**'
+        - 'README.md'
+        - 'docs/**'
+        - 'docs-export/**'
+  pull_request:
+    branches:
+      - 'main'
+    paths:
+      - '.github/actions/docs_build/**'
+      - 'README.md'
+      - 'docs/**'
+      - 'docs-export/**'
+
+jobs:
+  build:
+    concurrency: ci-${{ github.ref }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout input ref
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Build md book
+        id: build-docs
+        uses: ./.github/actions/docs_build
+        with:
+          header-type: "branch"
+          doc-name: "${{ env.HEADER_TYPE }}"
+          book-dir: "docs-export"
+          redirect-url: "docs.ue4ss.com"
+        env:
+          HEADER_TYPE: ${{ startsWith(github.ref, 'refs/pull/') && github.ref || 'dev'}}
+
+      - name: Upload docs artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ startsWith(github.ref, 'refs/pull/') }}
+        with:
+          name: ${{ github.sha }}
+          path: ${{ steps.build-docs.outputs.output-dir }}
+          compression-level: 5
+
+      - name: Deploy to GitHub Pages
+        if: ${{github.ref == 'refs/heads/main'}}
+        uses: JamesIves/github-pages-deploy-action@v4.6.1
+        with:
+          folder: ~${{ steps.build-docs.outputs.output-dir }}
+          branch: gh-pages
+          target-folder: dev
+          clean: true

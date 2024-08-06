@@ -1,0 +1,78 @@
+name: "Build Docs"
+
+permissions:
+  contents: read
+
+inputs:
+  header-type:
+    description: 'Which version of a header should be generated. Options are branch, empty, or tag.'
+    required: true
+  doc-name:
+    description: 'Name of the ref to be added to the version warning header.'
+    required: true
+  book-dir:
+    description: 'book.toml location'
+    required: true
+  redirect-url:
+    description: 'URL that the version warning header will suggest the user to visit.'
+    required: false
+    default: "docs.ue4ss.com"
+outputs:
+  output-dir:
+    description: "Directory where documents are generated."
+    value: ${{ steps.build-docs.outputs.output-dir }}
+
+runs:
+    using: "composite"
+    steps:
+      - name: Calculate Header Template File Location
+        id: calc-header-template-loc
+        shell: bash
+        run: |
+          HEADER_PATH="${{ github.action_path }}/header-templates/${{inputs.header-type}}/header.hbs"
+          if [ ! -f ${HEADER_PATH} ]; then
+            echo "> [!WARNING]" >> $GITHUB_STEP_SUMMARY
+            echo "> Could not find a docs header.hbs template at `${HEADER_PATH}}`." >> $GITHUB_STEP_SUMMARY
+            echo "> Docs will be built with the default `theme/header.hbs` template in the docs repo." >> $GITHUB_STEP_SUMMARY
+          else
+            \cp -f ${HEADER_PATH} ${{inputs.book-dir}}/theme/header.hbs
+            echo "::notice::test123"
+          fi
+
+      - name: Replace tokens
+        uses: cschleiden/replace-tokens@v1.3
+        with:
+          files: '["${{inputs.book-dir}}/theme/header.hbs"]'
+        env:
+          REF_NAME: ${{inputs.doc-name}}
+          REDIRECT_URL: ${{inputs.redirect-url}}
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install cargo binstall
+        uses: cargo-bins/cargo-binstall@main
+
+      - name: Install mdbook
+        shell: bash
+        run: |
+          mkdir mdbook
+          curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=mdbook
+          echo `pwd`/mdbook/ >> $GITHUB_PATH
+
+      - name: Install mdbook preprocessors
+        shell: bash
+        run: |
+          cargo binstall mdbook-alerts --no-confirm
+          cargo binstall mdbook-linkcheck --no-confirm
+
+      - name: Build docs
+        id: build-docs
+        shell: bash
+        run: |
+          cd docs-export
+          mdbook build
+          echo "output-dir=`pwd`/book/html" >> "$GITHUB_OUTPUT"
+          echo "::notice::$GITHUB_OUTPUT"
