@@ -1,0 +1,17 @@
+name: Log dwmapi.dll version
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  make-release:
+    permissions: write-all
+    runs-on: windows-2022
+
+    steps:
+      - name: Log dwmapi.dll version
+        run: |
+          (Get-Item "C:\Windows\System32\dwmapi.dll").VersionInfo
