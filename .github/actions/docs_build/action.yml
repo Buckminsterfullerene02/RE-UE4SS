@@ -53,7 +53,7 @@ runs:
           python-version: '3.9'
 
       - name: Install cargo binstall
-        uses: cargo-bins/cargo-binstall@main
+        uses: cargo-bins/cargo-binstall@v1.6.8
 
       - name: Install mdbook
         shell: bash
@@ -62,17 +62,13 @@ runs:
           curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=mdbook
           echo `pwd`/mdbook/ >> $GITHUB_PATH
 
-      - name: Install mdbook preprocessors
-        shell: bash
+      - name: Install mdBook Preprocessors
         run: |
-          cargo binstall mdbook-alerts --no-confirm
-          cargo binstall mdbook-linkcheck --no-confirm
+          cargo binstall --no-confirm mdbook-mermaid
+          mdbook-mermaid install docs-export/
+          cargo binstall --no-confirm mdbook-alerts
 
-      - name: Build docs
-        id: build-docs
-        shell: bash
+      - name: Build
         run: |
-          cd docs-export
-          mdbook build
-          echo "output-dir=`pwd`/book/html" >> "$GITHUB_OUTPUT"
-          echo "::notice::$GITHUB_OUTPUT"
+          python docs-export/export.py
+          python docs-repo/build.py
